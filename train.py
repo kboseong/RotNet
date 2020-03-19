@@ -2,12 +2,13 @@ import argparse
 import numpy as np
 import torch
 import torch.optim as optim
-import model
+from  model import efficientnet, resnet
 from dataloader import CIFAR10
 from preprocessing import preprocess, valprocess
 from torchvision import transforms
 import configparser
 from tensorboardX import SummaryWriter
+import os
 
 def main(config):
     dataset = config['EXP']['dataset']
@@ -25,25 +26,29 @@ def main(config):
     scheduler_name = config['MODEL']['scheduler']
     criterion_name = config['MODEL']['criterion']
 
+    # fix seed
+    np.random.seed(seed)
+    torch.manual_seed(seed) 
+
     # make dataloader
-    preprocess = preprocess()
-    valprocess = valprocess()
+    pre_process = preprocess()
+    val_process = valprocess()
     if dataset == 'cifar10':
-        trainset = CIFAR10(root=root, train=True, download=True, transform=preprocess)
-        valset = CIFAR10(root=root, train=False, download=True, transform=valprocess)
+        trainset = CIFAR10(root=root, train=True, download=True, transform=pre_process)
+        valset = CIFAR10(root=root, train=False, download=True, transform=val_process)
         num_classes = len(trainset.classes)
     else :
         raise ValueError('make sure dataset is cifar 10, etc')
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=worker, seed=seed)
-    valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=worker, seed=seed)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=worker)
+    valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=worker)
 
     # get model
     if model_name == 'efficientnet':
-        phi = config['MODEL']['phi']
-        model = model.efficientnet(phi = phi, num_classes = num_classes)
+        phi = int(config['MODEL']['phi'])
+        model = efficientnet(phi = phi, num_classes = num_classes)
     elif model_name == 'resnet':
-        depth = config['MODEL']['depth']
-        model = model.resnet(depth = depth, num_classes = num_classes)
+        depth = int(config['MODEL']['depth'])
+        model = resnet(depth = depth, num_classes = num_classes)
     else:
         raise ValueError('no supported model name')
     model = model.cuda()
@@ -66,7 +71,7 @@ def main(config):
     else :
         raise ValueError('no supported scheduler name')
 
-    #tensorboard
+    # save dir
     try: 
         os.mkdir('model/{}'.format(exp_name))
         os.mkdir('logs/{}'.format(exp_name))
@@ -75,9 +80,16 @@ def main(config):
     
     writer = SummaryWriter("logs/{}".format(exp_name))
 
+    #save config 
+    with open('model/{}/config.ini'.format(exp_name), 'w') as configfile:
+        config.write(configfile)
+
     # training 
     iter = 0
+    best_acc = 0
     for epoch_num in range(epochs):
+
+        # -------------------------------- train model ---------------------------- #
         model.train()
         epoch_loss = []
         for iter_num, data in enumerate(trainloader):
@@ -99,12 +111,40 @@ def main(config):
             torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
             optimizer.step()
 
-            epoch_loss.append(loss)
+            epoch_loss.append(float(loss))
 
             writer.add_scalar('Loss/train', loss, iter)
             iter+=1
             print('Epoch: {} | Iteration: {} | Running loss: {:1.5f}'.format(epoch_num, iter_num, np.mean(np.array(epoch_loss))))
+        
+        # -------------------------------- validate model ---------------------------- #
+        model.eval()
+        val_loss = []
+        val_correct = 0
+        with torch.no_grad():
+            for iter_num, data in enumerate(valloader):
+                image, label = data[0], data[1]
+                image = image.cuda()
+                label = label.cuda()
 
+                output = model(image)
+                loss = criterion(output, label)
+
+                val_correct += (torch.max(output, 1)[1] == label).sum().item()
+                val_loss.append(float(loss))
+
+        acc = val_correct / len(valset)
+        val_loss_mean = np.mean(np.array(val_loss))
+        scheduler.step(val_loss_mean)
+
+        if best_acc < acc :
+            best_acc = acc
+
+        writer.add_scalar('Acc/val', acc, epoch_num)
+        writer.add_scalar('Loss/val', val_loss_mean, epoch_num)
+        torch.save(model.module.state_dict(), 'model/{}/model_{}.pt'.format(exp_name, epoch_num))
+
+    torch.save(model.module.state_dict(), 'model/{}/model_best_acc_{}.pt'.format(exp_name, best_acc))
 
 
 if __name__ == '__main__':

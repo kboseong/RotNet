@@ -3,7 +3,6 @@ from efficientnet_pytorch import EfficientNet
 
 
 def efficientnet(phi, num_classes):
-    
     if phi in [0,1,2,3,4,5,6,7]:
         model = EfficientNet.from_name('efficientnet-b{}'.format(phi), override_params={'num_classes': num_classes}) 
     else:
