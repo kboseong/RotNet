@@ -4,15 +4,30 @@ import os
 import os.path
 import numpy as np
 import sys
+import random
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
 else:
     import pickle
 
+import torchvision.transforms.functional as TF
+from torchvision import transforms
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
+import torch
 
+def rotate_img(img, rot):
+    if rot == 0: # 0 degrees rotation
+        return img
+    elif rot == 90: # 90 degrees rotation
+        return np.flipud(np.transpose(img, (1,0,2))).copy()
+    elif rot == 180: # 90 degrees rotation
+        return np.fliplr(np.flipud(img)).copy()
+    elif rot == 270: # 270 degrees rotation / or -90
+        return np.transpose(np.flipud(img), (1,0,2)).copy()
+    else:
+        raise ValueError('rotation should be 0, 90, 180, or 270 degrees')
 
 class CIFAR10(VisionDataset):
 
@@ -38,12 +53,13 @@ class CIFAR10(VisionDataset):
     }
 
     def __init__(self, root, train=True, transform=None, target_transform=None,
-                 download=False):
+                 download=False, unsuper = False):
 
         super(CIFAR10, self).__init__(root, transform=transform,
                                       target_transform=target_transform)
 
         self.train = train  # training set or test set
+        self.unsuper = unsuper
 
         if download:
             self.download()
@@ -106,6 +122,20 @@ class CIFAR10(VisionDataset):
         # to return a PIL Image
         img = Image.fromarray(img)
 
+        if self.unsuper:
+            rotated_imgs = [
+                    img,
+                    TF.rotate(img, 270),
+                    TF.rotate(img, 180),
+                    TF.rotate(img, 90),
+                ]
+            labels = torch.LongTensor([0, 1, 2, 3])
+
+            index = random.randrange(0,4)
+            img = rotated_imgs[index]
+            target = labels[index]
+            #return torch.stack(rotated_imgs, dim=0), rotation_labels
+        
         if self.transform is not None:
             img = self.transform(img)
 
@@ -114,6 +144,7 @@ class CIFAR10(VisionDataset):
 
         return img, target
 
+    
 
     def __len__(self):
         return len(self.data)

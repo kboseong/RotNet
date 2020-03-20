@@ -25,6 +25,7 @@ def main(config):
     optim_name = config['MODEL']['optim']
     scheduler_name = config['MODEL']['scheduler']
     criterion_name = config['MODEL']['criterion']
+    dataset_flag = config['EXP']['unsuper']
 
     # fix seed
     np.random.seed(seed)
@@ -34,8 +35,12 @@ def main(config):
     pre_process = preprocess()
     val_process = valprocess()
     if dataset == 'cifar10':
-        trainset = CIFAR10(root=root, train=True, download=True, transform=pre_process)
-        valset = CIFAR10(root=root, train=False, download=True, transform=val_process)
+        if dataset_flag == 'true':
+            unsuper = True
+        else:
+            unsuper = False
+        trainset = CIFAR10(root=root, train=True, download=True, transform=pre_process, unsuper = unsuper)
+        valset = CIFAR10(root=root, train=False, download=True, transform=val_process, unsuper = unsuper)
         num_classes = len(trainset.classes)
     else :
         raise ValueError('make sure dataset is cifar 10, etc')
@@ -67,7 +72,7 @@ def main(config):
         raise ValueError('no supported optimizer name')
     
     if scheduler_name =='reducelr':
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, verbose=True)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
     else :
         raise ValueError('no supported scheduler name')
 
