@@ -1,7 +1,7 @@
 import configparser
 
 
-def CustomConfigparser(field, config):
+def parse_config(field, config):
     F_config = configparser.ConfigParser(allow_no_value=True)
     T_config = configparser.ConfigParser(allow_no_value=True)
     F_config.read(field)
