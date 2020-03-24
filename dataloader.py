@@ -17,7 +17,7 @@ from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 import torch
 
-
+#dd
 
 def rotate_img(img, rot):
     if rot == 0: # 0 degrees rotation
