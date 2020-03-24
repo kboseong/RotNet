@@ -4,7 +4,7 @@ import os
 import os.path
 import numpy as np
 import sys
-import random
+import randoms
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -16,6 +16,8 @@ from torchvision import transforms
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
 import torch
+
+
 
 def rotate_img(img, rot):
     if rot == 0: # 0 degrees rotation

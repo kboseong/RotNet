@@ -26,6 +26,7 @@ def main(config):
     scheduler_name = config['MODEL']['scheduler']
     criterion_name = config['MODEL']['criterion']
     dataset_flag = config['EXP']['unsuper']
+    transfer = config['EXP']['transfer']
 
     # fix seed
     np.random.seed(seed)
