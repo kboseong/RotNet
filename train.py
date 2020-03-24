@@ -29,9 +29,14 @@ def main(args):
     gpus = config['EXP']['gpus']
     unsuper = config['EXP']['unsuper']
 
+
     # dataset params
     dataset = config['DATASET']['dataset']
     root = config['DATASET']['root']
+
+    # gpu
+    os.environ["CUDA_VISIBLE_DEVICES"]=gpus
+
 
     # model params
     optim_name = config['MODEL']['optim']
@@ -189,7 +194,7 @@ def main(args):
             best_acc = top1
 
         writer.add_scalar('Acc/top1-acc', top1, epoch_num)
-        writer.add_scalar('ACC/top5-acc', top5, epoch_num)
+        writer.add_scalar('Acc/top5-acc', top5, epoch_num)
         writer.add_scalar('Loss/val', val_loss_mean, epoch_num)
         writer.add_scalar('satus/lr', optimizer.param_groups[0]['lr'] , epoch_num)
         torch.save(model.module.state_dict(), 'saved/models/{}/model_{}.pt'.format(exp_name, epoch_num))
