@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 from model.model import efficientnet, resnet
+from dataloader.fasion import SimpleImageLoader
 from dataloader.cifar10 import CIFAR10
 from dataloader.preprocess import trainpreprocess, valpreprocess,rotpreprocess
 from torchvision import transforms
@@ -12,6 +13,7 @@ from parse_config import parse_config
 from model.over9000.over9000 import RangerLars
 from utils.util import rand_bbox
 from model.metric import accuracy
+from model.cyclicLR import CyclicLR
 import os
 
 def main(args):
@@ -33,6 +35,7 @@ def main(args):
     # dataset params
     dataset = config['DATASET']['dataset']
     root = config['DATASET']['root']
+    d_type = config['DATASET']['type']
 
     # gpu
     os.environ["CUDA_VISIBLE_DEVICES"]=gpus
@@ -65,6 +68,10 @@ def main(args):
         trainset = CIFAR10(root=root, train=True, download=True, transform=train_preprocess, unsuper = unsuper)
         valset = CIFAR10(root=root, train=False, download=True, transform=val_preprocess, unsuper = unsuper)
         num_classes = len(trainset.classes)
+    elif dataset == 'fasion':
+        trainset = SimpleImageLoader(root = root, split = 'train', transform = train_preprocess)
+        valset = SimpleImageLoader(root = root, split = 'validation', transform = val_preprocess)
+        num_classes = trainset.classnumber
     else :
         raise ValueError('make sure dataset is cifar 10, etc')
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=worker)
@@ -100,6 +107,8 @@ def main(args):
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
     elif scheduler_name == 'cosine':
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=0.)
+    elif scheduler_name == 'cyclic':
+        scheduler = CyclicLR(optimizer, base_lr=lr * 0.3, max_lr=lr, step_size_up=10, cycle_momentum=False)
     else :
         raise ValueError('no supported scheduler name')
 
@@ -203,8 +212,6 @@ def main(args):
         writer.add_scalar('satus/lr', optimizer.param_groups[0]['lr'] , epoch_num)
         torch.save(model.module.state_dict(), 'saved/models/{}/model_{}.pt'.format(exp_name, epoch_num))
         
-
-
     torch.save(model.module.state_dict(), 'saved/models/{}/model_best_acc_{}.pt'.format(exp_name, best_acc))
 
 

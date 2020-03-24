@@ -60,7 +60,11 @@ torchvision == 0.5.0
         ├── util.py
         └── ...
 
-## dataset
+## Dataset
+
+dataset은 clova 의 fasion dataset과, cifar10 dataset을 이용함.
+
+## Dataloader
 
 [https://pytorch.org/docs/stable/_modules/torchvision/datasets/cifar.html#CIFAR10](https://pytorch.org/docs/stable/_modules/torchvision/datasets/cifar.html#CIFAR10)
 
@@ -79,34 +83,34 @@ config 파일을 준비하고, 그 파일을 통해 training을 할 수 있음
 .ini 파일로 아래와 같이 적고 config 파일을 구성할 수 있음
 
     [EXP]
-    seed = 777
-    exp_name = efficientnet_b0_02
-    batch_size = 64
-    model = efficientnet
-    epochs = 100
-    lr = 1e-3
-    val_freq = 1
-    worker = 2
-    gpus = 0
-    unsuper 
+    seed = seed of your dataset(should be same for all exp)
+    exp_name = #experiment name, should be unique
+    batch_size = #size of batch
+    model = {resnet, efficientnet}
+    epochs = #number of epoch
+    lr = #learning rate
+    val_freq = #validation frequency(how often you validate your validation set if 1, eval every epoch
+    worker = #number of workers 
+    gpus = 0,1
+    unsuper = {true}
     
     [DATASET]
-    root = /home/jovyan/2020kaist/cs492/vision/datasets
-    dataset = cifar10
-    autoaug 
-    resize 
-    hflip 
-    rot 
+    root = #root of dataset dir
+    dataset = {cifar10, fasion}
+    autoaug = #need to work 
+    resize = #need to work
+    hflip = #need to work
+    rot = #need to work
     
     [MODEL]
-    depth = 0
-    optim = rangerlars
-    scheduler = cosine
-    criterion = crossentropy
-    transfer 
-    cutmix_alpha = 1
+    depth = {0,1,2,3,4,5,6,7 for efficientnet, 18, 50, 101, 152 for resnet}
+    optim = {adam, rangerlars}
+    scheduler = {reducelr. cosine, cyclic}
+    criterion = {crossentropy}
+    transfer = #need to work
+    cutmix_alpha = {0 to 1}
     cutmix_prob = 0
-    labelsmooth
+    labelsmooth = #need to work
 
 ### [train.py](http://train.py) 실행
 
@@ -135,10 +139,13 @@ Unsupervised learning 을 통해 학습된 모델의 parameter을 고정하고 f
 - Label smoothing
 - cutmix augmentation
 - rangerlars optimizer
+- learning rate scheduler : cyclic, cosine, reducelr
 
 ## Inference
 
 train 시킨 모델에 몇개의 샘플을 test.py를 통해 확인할 수 있음.
+
+## Result
 
 ## Issues
 
@@ -153,9 +160,11 @@ train 시킨 모델에 몇개의 샘플을 test.py를 통해 확인할 수 있�
 - [x]  valset preprocessing 수정
 - [x]  dataloader의 다양한 transform 추가(data augmentation)
 - [x]  unsupervised learning 을 위한 dataset 준비
+- [x]  fasion dataset(naver clova 제공) dataset 구현 - 기존 코드에 그대로 쓸 수 있도록
 - [ ]  inference code
 - [ ]  feature map을 뽑아서 바로 fc layer를 붙여 학습할 수 있도록 코드 구현
-- [ ]  fasion dataset(naver clova 제공) dataset 구현 - 기존 코드에 그대로 쓸 수 있도록
+- [ ]  self-supervised learning 코드 작성 
+- unsuper option 하나로 바로 training 까지
 
 ### Refference
 
