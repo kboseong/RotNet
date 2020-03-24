@@ -186,7 +186,11 @@ def main(args):
         val_loss_mean = np.mean(np.array(val_loss))
         top1 = np.mean(np.array(top1_list))
         top5 = np.mean(np.array(top5_list))
-        scheduler.step(val_loss_mean)
+        
+        if scheduler_name =='reducelr':
+            scheduler.step(val_loss_mean)
+        else:
+            scheduler.step()
 
         print('Epoch: {} | loss : {:1.5f} | top1-acc : {:1.5f} | top5-acc : {:1.5f}'.format(epoch_num, val_loss_mean, top1, top5))
 
