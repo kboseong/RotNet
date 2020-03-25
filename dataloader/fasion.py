@@ -28,7 +28,7 @@ class TransformTwice:
         return out1, out2    
     
 class SimpleImageLoader(torch.utils.data.Dataset):
-    def __init__(self, root, split, transform=None, loader=default_image_loader):
+    def __init__(self, root, split, transform=None, loader=default_image_loader, num_imgs_per_cat = 0, unsuper = False):
         rootdir = os.path.join(root)
         
         self.impath = os.path.join(rootdir, 'images')
@@ -62,34 +62,58 @@ class SimpleImageLoader(torch.utils.data.Dataset):
         self.TransformTwice = TransformTwice(transform)
         self.loader = loader
         self.split = split
-        self.classnumber = len(identity_class)
+        if unsuper :
+            self.classnumber = 4
+        else:
+            self.classnumber = len(identity_class)
         self.imnames = imnames
         self.imclasses = imclasses
+        self.unsuper = unsuper
+
+        if num_imgs_per_cat:
+            self._keep_first_k_examples_per_category(num_imgs_per_cat)
+            
+    def _keep_first_k_examples_per_category(self, num_imgs_per_cat):
+        print('num_imgs_per_category : {}'.format(num_imgs_per_cat))
+        class_list = [0] * self.classnumber
+        new_images = []
+        new_imclasses = []
+        for index, imclass in enumerate(self.imclasses):
+            if class_list[imclass-1]<num_imgs_per_cat:
+                new_images.append(self.imnames[index])
+                new_imclasses.append(self.imclasses[index])
+                class_list[imclass-1] +=1
+        self.imnames = new_images
+        self.imclasses = new_imclasses
+        for index, imclass in enumerate(class_list):
+            if imclass<num_imgs_per_cat:
+                print('image class {} not full file the requirement : {} / {}'.format(index, imclass+1, num_imgs_per_cat))
+
     
     def __getitem__(self, index):
         filename = self.imnames[index]
         img_name = self.loader(os.path.join(self.impath, filename))
         
-        if self.split != 'unlabel':
+        if not (self.unsuper):
             if self.transform is not None:
                 img = self.transform(img_name)
             label = self.imclasses[index]            
             return img, int(label)
         else:        
+            img = img_name
             rotated_imgs = [
-                    img,
-                    TF.rotate(img, 270),
-                    TF.rotate(img, 180),
-                    TF.rotate(img, 90),
+                    self.transform(img),
+                    self.transform(TF.rotate(img, 270)),
+                    self.transform(TF.rotate(img, 180)),
+                    self.transform(TF.rotate(img, 90)),
                 ]
-            labels = torch.LongTensor([0, 1, 2, 3])
+            labels = [0,1,2,3]
 
-            index = random.randrange(0,4)
-            img = rotated_imgs[index]
-            target = labels[index]
+            #index = random.randrange(0,4)
+            #img = rotated_imgs[index]
+            #target = labels[index]
             
-            return img, target         
-            
+            return rotated_imgs[0], labels[0], rotated_imgs[1], labels[1], rotated_imgs[2], labels[2], rotated_imgs[3], labels[3]
         
     def __len__(self):
         return len(self.imnames)               

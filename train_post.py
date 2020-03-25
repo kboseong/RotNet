@@ -64,31 +64,19 @@ def main(args):
         rot_preprocess = rotpreprocess()
     train_preprocess = trainpreprocess(config['DATASET'])
     val_preprocess = valpreprocess()
-    if dataset == 'cifar10':
-        trainset = CIFAR10(root=root, train=True, download=True, transform=train_preprocess, unsuper = unsuper)
-        valset = CIFAR10(root=root, train=False, download=True, transform=val_preprocess, unsuper = unsuper)
-        num_classes = len(trainset.classes)
-    elif dataset == 'fasion':
-        if unsuper :
-            trainset = SimpleImageLoader(root = root, split = 'unlabel', transform = rot_preprocess, unsuper = unsuper)
-        else :
-            trainset = SimpleImageLoader(root = root, split = 'train', transform = train_preprocess)
-        valset = SimpleImageLoader(root = root, split = 'validation', transform = val_preprocess, unsuper=unsuper)
+    
+    if dataset == 'fasion':
+        trainset = SimpleImageLoader(root = root, split = 'train', transform = train_preprocess, num_imgs_per_cat=num_imgs_per_cat)
+        valset = SimpleImageLoader(root = root, split = 'validation', transform = val_preprocess)
         num_classes = trainset.classnumber
-    else :
-        raise ValueError('make sure dataset is cifar 10, etc')
-    if unsuper:
-        batch_size = batch_size//4
+
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=worker)
     valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=worker)
 
     # get model
     if model_name == 'efficientnet':
         phi = int(config['MODEL']['depth'])
-        model = efficientnet(phi = phi, num_classes = num_classes)
-    elif model_name == 'resnet':
-        depth = int(config['MODEL']['depth'])
-        model = resnet(depth = depth, num_classes = num_classes)
+        model = efficientnet(phi = phi, num_classes = num_classes, transfer = transfer, block_op = 0)
     else:
         raise ValueError('no supported model name')
     model = model.cuda()
@@ -135,6 +123,7 @@ def main(args):
     # training 
     iter = 0
     best_acc = 0
+    
     for epoch_num in range(epochs):
 
         # -------------------------------- train model ---------------------------- #
@@ -142,39 +131,19 @@ def main(args):
         epoch_loss = []
         for iter_num, data in enumerate(trainloader):
             optimizer.zero_grad()
-            if unsuper :
-                image = torch.cat([data[0], data[2], data[4], data[6]], dim=0)
-                label = torch.cat([data[1], data[3], data[5], data[7]], dim=0)
-                image = image.cuda()
-                label = label.cuda()
-            else:
-                image, label = data[0], data[1]
-                image = image.cuda()
-                label = label.cuda()
-            pred = model(image)
-            loss = criterion(pred, label)
             
-            '''if cutmix_alpha <= 0.0 or np.random.rand(1) > cutmix_prob:
-                pred = model(image)
-                loss = criterion(pred, label)
-            else:
-                # CutMix : generate mixed sample
-                lam = np.random.beta(cutmix_alpha, cutmix_alpha)
-                rand_index = torch.randperm(image.size()[0]).cuda()
-                target_a = label
-                target_b = label[rand_index]
-                bbx1, bby1, bbx2, bby2 = rand_bbox(image.size(), lam)
-                image[:, :, bbx1:bbx2, bby1:bby2] = image[rand_index, :, bbx1:bbx2, bby1:bby2]
+            image, label = data[0], data[1]
+            image = image.cuda()
+            label = label.cuda()
 
-                pred = model(image)
-                lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (image.size()[-1] * image.size()[-2]))
-                loss = criterion(pred, target_a) * lam + criterion(pred, target_b) * (1. - lam)'''
+            feature_maps = model.extract_features_midconv(image)
+            loss = criterion(pred, label)
 
             if bool(loss == 0):
                 continue
 
             loss.backward()
-            #torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
             optimizer.step()
 
             epoch_loss.append(float(loss))
@@ -225,6 +194,7 @@ def main(args):
         torch.save(model.module.state_dict(), 'saved/models/{}/model_{}.pt'.format(exp_name, epoch_num))
         
         torch.save(model.module.state_dict(), 'saved/models/{}/model_best_acc_{}.pt'.format(exp_name, best_acc))
+
 
 
 
