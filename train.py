@@ -141,6 +141,7 @@ def main(args):
         model.train()
         epoch_loss = []
         for iter_num, data in enumerate(trainloader):
+            
             optimizer.zero_grad()
             if unsuper :
                 image = torch.cat([data[0], data[2], data[4], data[6]], dim=0)
@@ -196,30 +197,42 @@ def main(args):
 
                 pred = model(image)
                 loss = criterion(pred, label)
-                top1, top5 = accuracy(pred, label, (1, 5))
+                
+                if unsuper :
+                    top1,_ = accuracy(pred, label, (1, 2))
+                else:
+                    top1, top5 = accuracy(pred, label, (1, 5))
                 
                 top1_list.append(top1.item())
-                top5_list.append(top5.item())
+                
+                if not unsuper:
+                    top5_list.append(top5.item())
                 #val_correct += (torch.max(output, 1)[1] == label).sum().item()
                 val_loss.append(float(loss))
 
         #acc = val_correct / len(valset)
         val_loss_mean = np.mean(np.array(val_loss))
         top1 = np.mean(np.array(top1_list))
-        top5 = np.mean(np.array(top5_list))
+        if not unsuper:
+            top5 = np.mean(np.array(top5_list))
         
         if scheduler_name =='reducelr':
             scheduler.step(val_loss_mean)
         else:
             scheduler.step()
+        
+        if unsuper:
+            print('Epoch: {} | loss : {:1.5f} | top1-acc : {:1.5f} '.format(epoch_num, val_loss_mean, top1))
+        else:
+            print('Epoch: {} | loss : {:1.5f} | top1-acc : {:1.5f} | top5-acc : {:1.5f}'.format(epoch_num, val_loss_mean, top1, top5))
 
-        print('Epoch: {} | loss : {:1.5f} | top1-acc : {:1.5f} | top5-acc : {:1.5f}'.format(epoch_num, val_loss_mean, top1, top5))
 
         if best_acc < top1 :
             best_acc = top1
 
         writer.add_scalar('Acc/top1-acc', top1, epoch_num)
-        writer.add_scalar('Acc/top5-acc', top5, epoch_num)
+        if not unsuper:
+            writer.add_scalar('Acc/top5-acc', top5, epoch_num)
         writer.add_scalar('Loss/val', val_loss_mean, epoch_num)
         writer.add_scalar('satus/lr', optimizer.param_groups[0]['lr'] , epoch_num)
         torch.save(model.module.state_dict(), 'saved/models/{}/model_{}.pt'.format(exp_name, epoch_num))
