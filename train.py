@@ -212,8 +212,10 @@ def main(args):
         writer.add_scalar('satus/lr', optimizer.param_groups[0]['lr'] , epoch_num)
         torch.save(model.module.state_dict(), 'saved/models/{}/model_{}.pt'.format(exp_name, epoch_num))
         
-    torch.save(model.module.state_dict(), 'saved/models/{}/model_best_acc_{}.pt'.format(exp_name, best_acc))
+        torch.save(model.module.state_dict(), 'saved/models/{}/model_best_acc_{}.pt'.format(exp_name, best_acc))
 
+        if unsuper :
+            
 
 if __name__ == '__main__':
     
