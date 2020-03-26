@@ -47,7 +47,7 @@ def main(args):
     scheduler_name = config['MODEL']['scheduler']
     criterion_name = config['MODEL']['criterion']
     transfer = config['MODEL']['transfer']
-    block_op = config['MODEL']['block_op']
+    block_num = config['MODEL']['block_op']
     cutmix_alpha = float(config['MODEL']['cutmix_alpha'])
     cutmix_prob = float(config['MODEL']['cutmix_prob'])
     labelsmooth = config['MODEL']['labelsmooth']
@@ -86,7 +86,7 @@ def main(args):
     # get model
     if model_name == 'efficientnet':
         phi = int(config['MODEL']['depth'])
-        model = efficientnet(phi = phi, num_classes = num_classes, transfer = transfer, block_op = block_op)
+        model = efficientnet(phi = phi, num_classes = num_classes, transfer = transfer, block_num = block_num)
     elif model_name == 'resnet':
         depth = int(config['MODEL']['depth'])
         model = resnet(depth = depth, num_classes = num_classes)
