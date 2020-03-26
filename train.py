@@ -35,7 +35,7 @@ def main(args):
     # dataset params
     dataset = config['DATASET']['dataset']
     root = config['DATASET']['root']
-    num_imgs_per_cat = config['DATASET']['num_imgs_per_cat']
+    num_imgs_per_cat = int(config['DATASET']['num_imgs_per_cat'])
     d_type = config['DATASET']['type']
 
     # gpu
@@ -47,6 +47,7 @@ def main(args):
     scheduler_name = config['MODEL']['scheduler']
     criterion_name = config['MODEL']['criterion']
     transfer = config['MODEL']['transfer']
+    block_op = config['MODEL']['block_op']
     cutmix_alpha = float(config['MODEL']['cutmix_alpha'])
     cutmix_prob = float(config['MODEL']['cutmix_prob'])
     labelsmooth = config['MODEL']['labelsmooth']
@@ -72,7 +73,7 @@ def main(args):
         if unsuper :
             trainset = SimpleImageLoader(root = root, split = 'unlabel', transform = rot_preprocess, unsuper = unsuper)
         else :
-            trainset = SimpleImageLoader(root = root, split = 'train', transform = train_preprocess)
+            trainset = SimpleImageLoader(root = root, split = 'train', transform = train_preprocess, num_imgs_per_cat=num_imgs_per_cat)
         valset = SimpleImageLoader(root = root, split = 'validation', transform = val_preprocess, unsuper=unsuper)
         num_classes = trainset.classnumber
     else :
@@ -85,7 +86,7 @@ def main(args):
     # get model
     if model_name == 'efficientnet':
         phi = int(config['MODEL']['depth'])
-        model = efficientnet(phi = phi, num_classes = num_classes)
+        model = efficientnet(phi = phi, num_classes = num_classes, transfer = transfer, block_op = block_op)
     elif model_name == 'resnet':
         depth = int(config['MODEL']['depth'])
         model = resnet(depth = depth, num_classes = num_classes)
@@ -102,9 +103,9 @@ def main(args):
         raise ValueError('no supported loss function name')
 
     if optim_name == 'adam':
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
     elif optim_name == 'rangerlars':
-        optimizer = RangerLars(model.parameters(), lr=lr)
+        optimizer = RangerLars(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
     else :
         raise ValueError('no supported optimizer name')
     
