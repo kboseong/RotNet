@@ -15,6 +15,7 @@ from utils.util import rand_bbox
 from model.metric import accuracy
 from model.cyclicLR import CyclicLR
 import os
+import random
 
 def main(args):
     config = parse_config(args.field, args.config)
@@ -146,11 +147,13 @@ def main(args):
         model.train()
         epoch_loss = []
         for iter_num, data in enumerate(trainloader):
-            
+            #break
             optimizer.zero_grad()
             if unsuper :
-                image = torch.cat([data[0], data[2], data[4], data[6]], dim=0)
-                label = torch.cat([data[1], data[3], data[5], data[7]], dim=0)
+                random_index = [0,2,4,6] 
+                random.shuffle(random_index)
+                image = torch.cat([data[random_index[0]], data[random_index[1]], data[random_index[2]], data[random_index[3]]], dim=0)
+                label = torch.cat([data[random_index[0]+1], data[random_index[1]+1], data[random_index[2]+1], data[random_index[3]+1]], dim=0)
                 image = image.cuda()
                 label = label.cuda()
             else:
@@ -158,6 +161,7 @@ def main(args):
                 image = image.cuda()
                 label = label.cuda()
             pred = model(image)
+            #print(pred, label)
             loss = criterion(pred, label)
             #print(label)
             
@@ -207,7 +211,7 @@ def main(args):
                     image, label = data[0], data[1]
                     image = image.cuda()
                     label = label.cuda()
-
+                #print(image, label)
                 pred = model(image)
                 loss = criterion(pred, label)
                 
