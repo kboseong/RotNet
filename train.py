@@ -35,7 +35,7 @@ def main(args):
     # dataset params
     dataset = config['DATASET']['dataset']
     root = config['DATASET']['root']
-    num_imgs_per_cat = int(config['DATASET']['num_imgs_per_cat'])
+    num_imgs_per_cat = config['DATASET']['num_imgs_per_cat']
     d_type = config['DATASET']['type']
 
     # gpu
@@ -86,16 +86,20 @@ def main(args):
     # get model
     if model_name == 'efficientnet':
         phi = int(config['MODEL']['depth'])
+        print(transfer, block_num, num_classes, num_imgs_per_cat)
         model = efficientnet(phi = phi, num_classes = num_classes, transfer = transfer, block_num = block_num)
     elif model_name == 'resnet':
         depth = int(config['MODEL']['depth'])
         model = resnet(depth = depth, num_classes = num_classes)
     else:
         raise ValueError('no supported model name')
+    
+    print(model)
     model = model.cuda()
     model = torch.nn.DataParallel(model).cuda()
     model.training = True
-
+    
+    
     # set loss & optimizer & scheduler
     if criterion_name == 'crossentropy':
         criterion = torch.nn.CrossEntropyLoss()
@@ -155,6 +159,7 @@ def main(args):
                 label = label.cuda()
             pred = model(image)
             loss = criterion(pred, label)
+            #print(label)
             
             '''if cutmix_alpha <= 0.0 or np.random.rand(1) > cutmix_prob:
                 pred = model(image)
@@ -192,9 +197,16 @@ def main(args):
         top5_list = []
         with torch.no_grad():
             for iter_num, data in enumerate(valloader):
-                image, label = data[0], data[1]
-                image = image.cuda()
-                label = label.cuda()
+
+                if unsuper :
+                    image = torch.cat([data[0], data[2], data[4], data[6]], dim=0)
+                    label = torch.cat([data[1], data[3], data[5], data[7]], dim=0)
+                    image = image.cuda()
+                    label = label.cuda()
+                else:
+                    image, label = data[0], data[1]
+                    image = image.cuda()
+                    label = label.cuda()
 
                 pred = model(image)
                 loss = criterion(pred, label)
@@ -205,6 +217,7 @@ def main(args):
                     top1, top5 = accuracy(pred, label, (1, 5))
                 
                 top1_list.append(top1.item())
+                print('Val_Epoch: {} | iter : {} | top1-acc : {:1.5f}'.format(epoch_num, iter_num, top1))
                 
                 if not unsuper:
                     top5_list.append(top5.item())

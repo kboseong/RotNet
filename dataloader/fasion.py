@@ -71,7 +71,7 @@ class SimpleImageLoader(torch.utils.data.Dataset):
         self.unsuper = unsuper
 
         if num_imgs_per_cat:
-            self._keep_first_k_examples_per_category(num_imgs_per_cat)
+            self._keep_first_k_examples_per_category(int(num_imgs_per_cat))
             
     def _keep_first_k_examples_per_category(self, num_imgs_per_cat):
         print('num_imgs_per_category : {}'.format(num_imgs_per_cat))
