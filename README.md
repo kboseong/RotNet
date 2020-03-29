@@ -1,5 +1,8 @@
 # RotNet
 
+## 논문리뷰
+[논문리뷰](https://github.com/kboseong/RotNet/blob/master/paper_review.md)
+
 ## 순서
 
 1. cifar 10 dataset을 구성함.

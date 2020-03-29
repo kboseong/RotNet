@@ -13,6 +13,7 @@ def efficientnet(phi, num_classes, transfer=False, block_num = False, freeze = F
         print('load model weight from {}'.format(transfer))
         del model
         if no_head:
+            print('you select no-head option')
             model = classifier_with_no_head_conv.from_name('efficientnet-b{}'.format(phi), override_params={'num_classes': num_classes}, block_num = int(block_num))
         else:
             model = classifier.from_name('efficientnet-b{}'.format(phi), override_params={'num_classes': num_classes}, block_num = int(block_num))

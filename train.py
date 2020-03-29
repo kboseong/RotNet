@@ -49,6 +49,7 @@ def main(args):
     criterion_name = config['MODEL']['criterion']
     transfer = config['MODEL']['transfer']
     block_num = config['MODEL']['block_op']
+    no_head = config['MODEL']['no_head']
     cutmix_alpha = float(config['MODEL']['cutmix_alpha'])
     cutmix_prob = float(config['MODEL']['cutmix_prob'])
     labelsmooth = config['MODEL']['labelsmooth']
@@ -79,8 +80,8 @@ def main(args):
         num_classes = trainset.classnumber
     else :
         raise ValueError('make sure dataset is cifar 10, etc')
-    if unsuper:
-        batch_size = batch_size//4
+    '''if unsuper:
+        batch_size = batch_size//4'''
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=worker)
     valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=False, num_workers=worker)
 
@@ -88,7 +89,10 @@ def main(args):
     if model_name == 'efficientnet':
         phi = int(config['MODEL']['depth'])
         print(transfer, block_num, num_classes, num_imgs_per_cat)
-        model = efficientnet(phi = phi, num_classes = num_classes, transfer = transfer, block_num = block_num)
+        if no_head == 'true' :
+            model = efficientnet(phi = phi, num_classes = num_classes, transfer = transfer, block_num = block_num, no_head=True)
+        else:
+            model = efficientnet(phi = phi, num_classes = num_classes, transfer = transfer, block_num = block_num)
     elif model_name == 'resnet':
         depth = int(config['MODEL']['depth'])
         model = resnet(depth = depth, num_classes = num_classes)
@@ -108,9 +112,11 @@ def main(args):
         raise ValueError('no supported loss function name')
 
     if optim_name == 'adam':
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
+        #optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
     elif optim_name == 'rangerlars':
-        optimizer = RangerLars(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
+        #optimizer = RangerLars(filter(lambda p: p.requires_grad, model.parameters()), lr=lr)
+        optimizer = RangerLars(model.parameters(), lr=lr)
     else :
         raise ValueError('no supported optimizer name')
     
@@ -150,10 +156,13 @@ def main(args):
             #break
             optimizer.zero_grad()
             if unsuper :
-                random_index = [0,2,4,6] 
+                '''random_index = [0,2,4,6] 
                 random.shuffle(random_index)
                 image = torch.cat([data[random_index[0]], data[random_index[1]], data[random_index[2]], data[random_index[3]]], dim=0)
                 label = torch.cat([data[random_index[0]+1], data[random_index[1]+1], data[random_index[2]+1], data[random_index[3]+1]], dim=0)
+                image = image.cuda()
+                label = label.cuda()'''
+                image, label = data[0], data[1]
                 image = image.cuda()
                 label = label.cuda()
             else:
@@ -203,8 +212,11 @@ def main(args):
             for iter_num, data in enumerate(valloader):
 
                 if unsuper :
-                    image = torch.cat([data[0], data[2], data[4], data[6]], dim=0)
+                    '''image = torch.cat([data[0], data[2], data[4], data[6]], dim=0)
                     label = torch.cat([data[1], data[3], data[5], data[7]], dim=0)
+                    image = image.cuda()
+                    label = label.cuda()'''
+                    image, label = data[0], data[1]
                     image = image.cuda()
                     label = label.cuda()
                 else:

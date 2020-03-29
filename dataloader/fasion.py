@@ -107,14 +107,15 @@ class SimpleImageLoader(torch.utils.data.Dataset):
                     self.transform(TF.rotate(img, 180)),
                     self.transform(TF.rotate(img, 90)),
                 ]
-            labels = [0,1,2,3]
+            labels = torch.LongTensor([0, 1, 2, 3])
 
-            #index = random.randrange(0,4)
-            #img = rotated_imgs[index]
-            #target = labels[index]
+            index = random.randrange(0,4)
+            img = rotated_imgs[index]
+            target = labels[index]
             
-            return rotated_imgs[0], labels[0], rotated_imgs[1], labels[1], rotated_imgs[2], labels[2], rotated_imgs[3], labels[3]
-        
+            #return rotated_imgs[0], labels[0], rotated_imgs[1], labels[1], rotated_imgs[2], labels[2], rotated_imgs[3], labels[3]
+            return img, target
+
     def __len__(self):
         return len(self.imnames)               
     
