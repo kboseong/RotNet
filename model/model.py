@@ -34,8 +34,10 @@ def efficientnet(phi, num_classes, transfer=False, block_num = False, freeze = F
 
                 new_dict[k] = v
         else:
-            #new_dict = pretrained_dict
-            raise ValueError('block op sould be in [0 to 15]')
+            new_dict = pretrained_dict  
+            new_dict['_fc.weight'] = new_model_dict['_fc.weight']
+            new_dict['_fc.bias'] = new_model_dict['_fc.bias']
+            #raise ValueError('block op sould be in [0 to 15]')
         new_model_dict.update(new_dict)
         model.load_state_dict(new_model_dict)
     return model

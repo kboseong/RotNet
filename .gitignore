@@ -3,4 +3,4 @@ __pycache__
 saved/
 
 .vscode
-.ipynb
+*.ipynb

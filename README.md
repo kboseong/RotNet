@@ -3,22 +3,6 @@
 ## 논문리뷰
 [논문리뷰](https://github.com/kboseong/RotNet/blob/master/paper_review.md)
 
-## 순서
-
-1. cifar 10 dataset을 구성함.
-2. efficientNet b0, b5 로 supervised learning
-3. resnet50, 101으로 supervised learning
-4. cifar 10 dataset을 변형하여 self-supervised learning 을 할 수 있도록 변형
-- 한 데이터셋에 4개의 각도를 뒤집은 것이 같이 들어가도록 함
-- 여러가지 argumentation을 줄 수 있도록 함
-5. naver clova fasion dataset 도 수행
-6. cutmix, langer optim 등 정확도 향상에 도움을 줄 수 있는 옵션들 추가
-7. efficientNet backbone, resnet backbone 에서 self supervised learning 수행
-8. 각 feature map 별로 classfier을 학습시킴
-9. 2,3 번과 비교한 결과, 논문과 비교한 결과를 리포트
-
-cheeta의 2020kaist volume 에 작업함. 
-
 ## 환경구성
 
 환경은 cuda10.0, cudnn 7.5로 작업하였음
@@ -100,6 +84,8 @@ config 파일을 준비하고, 그 파일을 통해 training을 할 수 있음
     [DATASET]
     root = #root of dataset dir
     dataset = {cifar10, fasion}
+    num_imgs_per_cat = {number of image for each class}
+    type = #need to work
     autoaug = #need to work 
     resize = #need to work
     hflip = #need to work
@@ -111,6 +97,8 @@ config 파일을 준비하고, 그 파일을 통해 training을 할 수 있음
     scheduler = {reducelr. cosine, cyclic}
     criterion = {crossentropy}
     transfer = #need to work
+    block_op = {0~15 int}
+    no_head = {true}
     cutmix_alpha = {0 to 1}
     cutmix_prob = 0
     labelsmooth = #need to work
@@ -133,9 +121,17 @@ dataset 을 unsuper=True 옵션을 키면 0, 90, 180, 270도 돌린사진과 각
 
 ### transfer learning(down stream task)
 
-Unsupervised learning 을 통해 학습된 모델의 parameter을 고정하고 fc layer만 학습시키도록 하여 down stream task를 수행할 수 있음
+Unsupervised learning 을 통해 학습된 모델을 transfer, block_op 과 no_head 세가지 옵션을 통해 불러올 수 있음
 
-    need to fill
+transfer은 어떤 모델파일로 부터 weight를 로드할것인가에 대한 parameter임.
+
+efficientnetb0는 block이 15개로, block_op을 0~15까지 줄 수 있으며, 이 옵션을 통해 해당 block까지만 가진 model을 생성할 수 있음.
+
+original efficientnet의 경우 block 맨 끝에 head conv라 불리는 convolution layer하나가 추가되어있는데, 이 head는 최종 block의 output채널을 input channel로 받아 output channel=1280으로 내뱉음. 해당 layer를 추가할지 여부를 no_head option을 설정가능함
+
+    from model.model import efficientnet
+    #how to use
+    model = efficientnet(phi = phi, num_classes = num_classes, transfer = transfer, block_num = block_num, no_head=True)
 
 ### 정확도를 올리기 위해 사용한 기법들
 
@@ -148,15 +144,122 @@ Unsupervised learning 을 통해 학습된 모델의 parameter을 고정하고 f
 
 train 시킨 모델에 몇개의 샘플을 test.py를 통해 확인할 수 있음.
 
+## Experiment
+
+### 환경
+
+- Model = EfficientNet B0
+- Dataset = Fasion Dataset (265 class fasion dataset from naver)
+- Batch Size = 64
+- Learning rate
+    - supervised = 0.001
+    - unsupervised = 0.01
+- Learning rate scheduler = CosineAnnealingLR (시작 lr 부터 0까지 cosine함수로 줄어듬)
+- Optimizer = RangerLars(RAdam + LARS + Lookahead) (현재 최고 성능 optimizer)
+- DataAug
+    - supervised train = RandomResizeCrop, RandomHorizontalFlip, RandomRotation, Normalize
+    - unsupervised train = RandomResizeCrop, Normalize
+    - All validation = Resize, Centercrop, Normalize
+
+### 순서
+
+1. Baseline을 위하여 Efficientnet 을 class 별 이미지 개수를 다르게 하여 학습시킴(5,10,20,30,40,50,60,70)
+2. rotation task를 학습시킴 - unsupervised learning model
+3. block을 2, 4, 10, 15에서 추출하고 각각에 대해서 conv layer + fc layer, fc layer 두가지 종류의 classifier을 붙여서 classification을 수행시킴 
+4. rotation task 의 정확도 별로 weight를 다르게 가져와서 block, class별 이미지 개수, header를 고정시킨 상태에서 classification을 수행시킴
+5. pretrained model weight를 고정한 상태에서 class별 이미지 개수를 달리면서 classfication을 수행시킴
+
+아래의 실험들을 진행함
+
+    #base line
+    fasion_efficientnet_cat_5
+    fasion_efficientnet_cat_10 
+    fasion_efficientnet_cat_20 
+    fasion_efficientnet_cat_30
+    fasion_efficientnet_cat_40  
+    fasion_efficientnet_cat_50
+    fasion_efficientnet_cat_60
+    fasion_efficientnet_cat_70
+    
+    fasion_efficientnet_cat_5_batch_64
+    ****fasion_efficientnet_cat_10_batch_64
+    fasion_efficientnet_cat_20_batch_64
+    fasion_efficientnet_cat_30_batch_64
+    fasion_efficientnet_cat_40_batch_64
+    fasion_efficientnet_cat_50_batch_64
+    fasion_efficientnet_cat_60_batch_64
+    fasion_efficientnet_cat_70_batch_64
+    
+    #unsupervised learning
+    fasion_efficientnet_b0_unsuper_no_full_batch(lr = 1e-2)
+    fasion_efficientnet_b0_unsuper_no_full_batch_lr_1e-3
+    
+    #block test with head true
+    POST_fasion_block_2_cat_70_head_true
+    POST_fasion_block_4_cat_70_head_true
+    POST_fasion_block_10_cat_70_head_true
+    POST_fasion_block_15_cat_70_head_true(same stucture with efficientnet)
+    POST_fasion_full_transfer_cat_70(same stucture with efficientnet, only different fc layer weight)
+    
+    #block test with head false
+    POST_fasion_block_2_cat_70_head_false
+    POST_fasion_block_4_cat_70_head_false
+    POST_fasion_block_10_cat_70_head_false
+    POST_fasion_block_15_cat_70_head_false
+    
+    #cat image test
+    POST_fasion_block_15_cat_5_head_true
+    POST_fasion_block_15_cat_10_head_true
+    POST_fasion_block_15_cat_20_head_true
+    POST_fasion_block_15_cat_30_head_true
+    POST_fasion_block_15_cat_40_head_true
+    POST_fasion_block_15_cat_50_head_true
+    POST_fasion_block_15_cat_60_head_true
+    POST_fasion_block_15_cat_70_head_true
+    
+    POST_fasion_full_transfer_cat_5
+    POST_fasion_full_transfer_cat_10
+    POST_fasion_full_transfer_cat_20
+    POST_fasion_full_transfer_cat_30
+    POST_fasion_full_transfer_cat_40
+    POST_fasion_full_transfer_cat_50
+    POST_fasion_full_transfer_cat_60
+    POST_fasion_full_transfer_cat_70
+    
+    #rotnet-acc based exp
+    POST_fasion_rotnet_0_block_15_cat_10_head_true
+    POST_fasion_rotnet_3_block_15_cat_10_head_true
+    POST_fasion_rotnet_4_block_15_cat_10_head_true
+    POST_fasion_rotnet_7_block_15_cat_10_head_true
+    POST_fasion_rotnet_11_block_15_cat_10_head_true
+    POST_fasion_rotnet_17_block_15_cat_10_head_true
+    POST_fasion_rotnet_36_block_15_cat_10_head_true
+    POST_fasion_rotnet_63_block_15_cat_10_head_true
+    POST_fasion_rotnet_98_block_15_cat_10_head_true
+    
+    #retraining from rotnet 4
+    POST_fasion_rotnet_4_block_15_cat_5_head_true
+    POST_fasion_rotnet_4_block_15_cat_10_head_true
+    POST_fasion_rotnet_4_block_15_cat_20_head_true
+    POST_fasion_rotnet_4_block_15_cat_30_head_true
+    POST_fasion_rotnet_4_block_15_cat_40_head_true
+    POST_fasion_rotnet_4_block_15_cat_50_head_true
+    POST_fasion_rotnet_4_block_15_cat_60_head_true
+    POST_fasion_rotnet_4_block_15_cat_70_head_true
+
 ## Result
+
+Need to fill
 
 ## Issues
 
 1. cifar 10은 32*32이미지인데, efficientnet 은 최소 224*224 이미지에 대해서 학습이 잘 되도록 설계되었음.
-이걸 어캐 적절히 바꿔줘야할까?
+이걸 어떻게 적절히 바꿔줘야할까?
 [https://github.com/lukemelas/EfficientNet-PyTorch/issues/42](https://github.com/lukemelas/EfficientNet-PyTorch/issues/42)
 2. unsupervised learning 방식을 평가하기 위한 적절한 metric과 dataset은 무엇인가?
-3. configuration 기반 exp 관리를 깔끔하게 하는 방법은?
+3. unsupervised learning과 classification task 를 위한 각각의 train dataset augmentation 기법은 어떤 것들이 적절할까? 
+4. configuration 기반 exp 관리를 깔끔하게 하는 방법은?
+5. efficientnet 마지막의 con layer의 역할은?
 
 ## To-do
 
@@ -164,13 +267,14 @@ train 시킨 모델에 몇개의 샘플을 test.py를 통해 확인할 수 있�
 - [x]  dataloader의 다양한 transform 추가(data augmentation)
 - [x]  unsupervised learning 을 위한 dataset 준비
 - [x]  fasion dataset(naver clova 제공) dataset 구현 - 기존 코드에 그대로 쓸 수 있도록
-- [ ]  inference code
-- [ ]  feature map을 뽑아서 바로 fc layer를 붙여 학습할 수 있도록 코드 구현
-- [ ]  self-supervised learning 코드 작성 
+- [x]  feature map을 뽑아서 바로 fc layer를 붙여 학습할 수 있도록 코드 구현
+- [x]  self-supervised learning 코드 작성 
 - unsuper option 하나로 바로 training 까지
+- [ ]  inference code
 
 ### Refference
 
 - [https://github.com/wbaek/theconf](https://github.com/wbaek/theconf)
 - [https://arxiv.org/abs/1905.04899](https://arxiv.org/abs/1905.04899)
 - [https://github.com/mgrankin/over9000](https://github.com/mgrankin/over9000)
+- [https://github.com/victoresque/pytorch-template](https://github.com/victoresque/pytorch-template)
