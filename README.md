@@ -61,6 +61,12 @@ dataset은 clova 의 fasion dataset과, cifar10 dataset을 이용함.
 
 unsupervised learning을 위해 nsuper=True 옵션을 키면 0, 90, 180, 270도 돌린사진과 각 라벨이 0,1,2,3 으로 구성된 데이터셋을 뽑을 수 있도록 제작함.
 
+    trainset = SimpleImageLoader(root = {root dir}, split = 'unlabel', transform = {transform function}, unsuper = {True, False}, num_imgs_per_cat={#img per class})
+    valset = SimpleImageLoader(root = {root dir}, split = 'validation', transform = {transform function}, unsuper= {True, False})
+    num_classes = trainset.classnumber
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size={batch size}, shuffle=True, num_workers={#workers})
+    valloader = torch.utils.data.DataLoader(valset, batch_size={batch size}, shuffle=False, num_workers={#workers})
+
 ## Training
 
 ### config
@@ -96,7 +102,7 @@ config 파일을 준비하고, 그 파일을 통해 training을 할 수 있음
     optim = {adam, rangerlars}
     scheduler = {reducelr. cosine, cyclic}
     criterion = {crossentropy}
-    transfer = #need to work
+    transfer = {model weight location to transfer learning}
     block_op = {0~15 int}
     no_head = {true}
     cutmix_alpha = {0 to 1}
@@ -109,11 +115,11 @@ config 파일을 준비하고, 그 파일을 통해 training을 할 수 있음
 
 을 통해 실행할 수 있으며, 
 
-    tensorboard --logdir={logdir}
+    tensorboard --logdir=saved/logs
 
 을 통해 텐서보드에서 train loss 와 vall acc, loss를 확인할 수 있음
 
-해당 config file 의 exp name으로 log, moel 각각에 정보가 저장되며, model/{exp_name} 아래에 해당 train.py를 실행시킬 때 사용된 config file이 저장됨.
+해당 config file 의 exp name으로 saved 폴더 안에 log, moel 각각에 정보가 저장되며, model/{exp_name} 아래에 해당 train.py를 실행시킬 때 사용된 config file이 저장됨.
 
 ### Unsupervised learning
 
@@ -140,9 +146,11 @@ original efficientnet의 경우 block 맨 끝에 head conv라 불리는 convolut
 - rangerlars optimizer
 - learning rate scheduler : cyclic, cosine, reducelr
 
+위의 다양한 방법론들을 efficientnet b0 baseline의 정확도를 높이는데 사용하려 했으나, Label smoothing 과 cutmix augmentation 두가지는 이후 training 에서 조건을 같이 맞추기 위해 최종실험에서는 제외함.
+
 ## Inference
 
-train 시킨 모델에 몇개의 샘플을 test.py를 통해 확인할 수 있음.
+Need to work
 
 ## Experiment
 
@@ -318,15 +326,16 @@ EfficientNet의 15block까지의 weight를 로드 하였을 때 참조되는 모
 3. unsupervised learning과 classification task 를 위한 각각의 train dataset augmentation 기법은 어떤 것들이 적절할까? 
 4. configuration 기반 exp 관리를 깔끔하게 하는 방법은?
 5. efficientnet 마지막의 con layer의 역할은?
+6. 실험에 영향을 줄수있는 lr 등의 요소들이 많은데, 시간의 한계로 전부 하지 못하는 상황, 적절한 lr 선정은 어떻게?
 
 ## To-do
 
-- [x]  valset preprocessing 수정
-- [x]  dataloader의 다양한 transform 추가(data augmentation)
-- [x]  unsupervised learning 을 위한 dataset 준비
-- [x]  fasion dataset(naver clova 제공) dataset 구현 - 기존 코드에 그대로 쓸 수 있도록
-- [x]  feature map을 뽑아서 바로 fc layer를 붙여 학습할 수 있도록 코드 구현
-- [x]  self-supervised learning 코드 작성 
+- [x] valset preprocessing 수정
+- [x] dataloader의 다양한 transform 추가(data augmentation)
+- [x] unsupervised learning 을 위한 dataset 준비
+- [x] fasion dataset(naver clova 제공) dataset 구현 - 기존 코드에 그대로 쓸 수 있도록
+- [x] feature map을 뽑아서 바로 fc layer를 붙여 학습할 수 있도록 코드 구현
+- [x] self-supervised learning 코드 작성 
 - [x] unsuper option 하나로 바로 training 까지
 
 ### Refference
