@@ -103,7 +103,7 @@ config 파일을 준비하고, 그 파일을 통해 training을 할 수 있음
     cutmix_prob = 0
     labelsmooth = #need to work
 
-### [train.py](http://train.py) 실행
+### train 실행
 
     python train.py --field {conifg field file direction} --config {config file direction}
 
