@@ -337,6 +337,7 @@ EfficientNet의 15block까지의 weight를 로드 하였을 때 참조되는 모
 - [x] feature map을 뽑아서 바로 fc layer를 붙여 학습할 수 있도록 코드 구현
 - [x] self-supervised learning 코드 작성 
 - [x] unsuper option 하나로 바로 training 까지
+- [ ] inference code
 
 ### Refference
 
