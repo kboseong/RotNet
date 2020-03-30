@@ -345,4 +345,7 @@ EfficientNet의 15block까지의 weight를 로드 하였을 때 참조되는 모
 - [https://arxiv.org/abs/1905.04899](https://arxiv.org/abs/1905.04899)
 - [https://github.com/mgrankin/over9000](https://github.com/mgrankin/over9000)
 - [https://github.com/victoresque/pytorch-template](https://github.com/victoresque/pytorch-template)
+- [https://github.com/lukemelas/EfficientNet-PyTorch](https://github.com/lukemelas/EfficientNet-PyTorch)
+- [https://github.com/gidariss/FeatureLearningRotNet](https://github.com/gidariss/FeatureLearningRotNet)
+- [https://github.com/shine0624/semi-sup-learning](https://github.com/shine0624/semi-sup-learning)
 
