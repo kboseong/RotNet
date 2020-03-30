@@ -1,7 +1,7 @@
 # RotNet
 
 ## 논문리뷰
-[논문리뷰](https://github.com/kboseong/RotNet/blob/master/paper_review.md)
+[논문리뷰](https://github.com/kboseong/RotNet/blob/master/src/paper_review.md)
 
 ## 환경구성
 
@@ -249,7 +249,65 @@ train 시킨 모델에 몇개의 샘플을 test.py를 통해 확인할 수 있�
 
 ## Result
 
-Need to fill
+1. Baseline을 위하여 Efficientnet 을 class 별 이미지 개수를 다르게 하여 학습시킴(5,10,20,30,40,50,60,70)
+
+    ![](https://github.com/kboseong/RotNet/blob/master/src/efficientnet.png)
+
+2. rotation task를 학습시킴 - unsupervised learning model
+
+    → 94.8%의 최종 accuracy를 확보함
+
+    ![](https://github.com/kboseong/RotNet/blob/master/src/acc_of_rotation_task_epoch.png)
+
+3. block을 2, 4, 10, 15에서 추출하고 각각에 대해서 conv layer + fc layer, fc layer 두가지 종류의 classifier을 붙여서 classification을 수행시킴 
+
+    → conv layer + fc lyaer가 단독 fc layer보다 성능이 높았고, block이 뒤쪽으로 갈수록 더 성능이 높았음
+    → 이를 통해 head = true, block = 15 option을 이후에 사용하기로 함
+
+    ![](https://github.com/kboseong/RotNet/blob/master/src/blocks_and_head.png)
+
+4. rotation task 의 정확도 별로 weight를 다르게 가져와서 block, class별 이미지 개수, header를 고정시킨 상태에서 classification을 수행시킴
+
+    → 58%정확도인 epoch 5 모델을 가져다 썼을 때 가장 성능이 높았으며, 그 이후로 성능이 떨어짐
+    → epoch 5에서의 모델을 이후에 쓰기로 결정
+
+    ![](https://github.com/kboseong/RotNet/blob/master/src/acc_of_supervised_by_unsuper_epoch.png)
+    ![](https://github.com/kboseong/RotNet/blob/master/src/semisupervised_for_10_image.png)
+
+
+5. pretrained model weight를 고정한 상태에서 class별 이미지 개수를 달리면서 classfication을 수행시킴
+
+    → 기존 efficientnet b0 baseline과 비교하여 class 별 이미지 개수가 낮을 수록 supervised learning과 semi supervised learning의 차이가 컸음.
+
+    ![](https://github.com/kboseong/RotNet/blob/master/src/semisup_and_sup_by_image_per_class.png)
+
+
+## Discussion
+
+### Question-1
+
+alexnet을 이용한 기존 논문에는 앞쪽 block에서 image의 semantic한 feature을 뽑아내어 앞쪽 block을 사용하는 것이 더 좋은 성능을 보였으나 efficientnet의 경우는 그렇지 않음.
+
+### Answer-1
+
+Efficientnet은 논문에서 사용한 네트워크에 비해 깊은 구조를 가지며, 특정 image size의 input에 대해 classification을 가장 잘 수행할 수 있는 네트워크의 형태를 autoML 방식을 통해 찾은 모델임. 따라서, 앞쪽의 block까지만 사용할 수록, 그만큼 네트워크의 해석력이 원래의 네트워크에 비해 떨어지는 문제로 이어진 것으로 파악됨. 즉, 특정 block에서 이미지의 semantic한 feature을 잘학습했다고 하더라도, 원래의 task(265 classification)을 수행하기 위해서는 이후의 layer들의 역할이 중요하기 때문에, 네트워크의 형태를 가장 보존하는 block 15를 사용하는 것이 가장 효과적인 것으로 생각함.
+
+### Question-2
+
+왜 2, 4, 10 ,15 block을 선택했는가?
+
+### Answer-2
+
+feture map의 사이즈별로 마지막 block을 선택함. feature map이 (56,56), (28,28), (14,14), (7,7)로 줄어드는데, 줄어드는 마지막 block을 선택하였음.
+
+### Question-3
+
+왜 rotation task의 정확도가 높은 것보다 50~60% 사이의 구간이 가장 이후 fasion classification task를 더 잘 수행하는가?
+
+### Answer-3
+
+EfficientNet의 15block까지의 weight를 로드 하였을 때 참조되는 모델의 깊이가 굉장히 깊음. 따라서 rotnetation task에 너무 overfitting이 되면 오히려 본 task에 더 낮은 정확도를 보이는 것으로 생각됨
+
 
 ## Issues
 
@@ -269,8 +327,7 @@ Need to fill
 - [x]  fasion dataset(naver clova 제공) dataset 구현 - 기존 코드에 그대로 쓸 수 있도록
 - [x]  feature map을 뽑아서 바로 fc layer를 붙여 학습할 수 있도록 코드 구현
 - [x]  self-supervised learning 코드 작성 
-- unsuper option 하나로 바로 training 까지
-- [ ]  inference code
+- [x] unsuper option 하나로 바로 training 까지
 
 ### Refference
 
@@ -278,3 +335,4 @@ Need to fill
 - [https://arxiv.org/abs/1905.04899](https://arxiv.org/abs/1905.04899)
 - [https://github.com/mgrankin/over9000](https://github.com/mgrankin/over9000)
 - [https://github.com/victoresque/pytorch-template](https://github.com/victoresque/pytorch-template)
+

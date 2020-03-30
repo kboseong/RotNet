@@ -184,7 +184,7 @@ class classifier(nn.Module):
             if drop_connect_rate:
                 drop_connect_rate *= float(idx) / len(self._blocks)
             x = block(x, drop_connect_rate=drop_connect_rate)
-            #print(x.shape)
+            print(x.shape)
 
         # Head
         x = self._swish(self._bn1(self._conv_head(x)))
