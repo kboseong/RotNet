@@ -14,6 +14,7 @@ from model.over9000.over9000 import RangerLars
 from utils.util import rand_bbox
 from model.metric import accuracy
 from model.cyclicLR import CyclicLR
+from apex import amp
 import os
 import random
 
@@ -101,8 +102,9 @@ def main(args):
     
     print(model)
     model = model.cuda()
-    model = torch.nn.DataParallel(model).cuda()
-    model.training = True
+    #model = torch.nn.DataParallel(model).cuda()
+    
+    
     
     
     # set loss & optimizer & scheduler
@@ -128,7 +130,9 @@ def main(args):
         scheduler = CyclicLR(optimizer, base_lr=lr * 0.3, max_lr=lr, step_size_up=10, cycle_momentum=False)
     else :
         raise ValueError('no supported scheduler name')
-
+    
+    model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
+    model.training = True
     # save dir
     try: 
         os.mkdir('saved/models/{}'.format(exp_name))
@@ -172,6 +176,7 @@ def main(args):
             pred = model(image)
             #print(pred, label)
             loss = criterion(pred, label)
+            
             #print(label)
             
             '''if cutmix_alpha <= 0.0 or np.random.rand(1) > cutmix_prob:
@@ -192,8 +197,11 @@ def main(args):
 
             if bool(loss == 0):
                 continue
+            
 
-            loss.backward()
+            with amp.scale_loss(loss, optimizer) as scaled_loss:
+                scaled_loss.backward()      
+            #loss.backward()
             #torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1)
             optimizer.step()
 
